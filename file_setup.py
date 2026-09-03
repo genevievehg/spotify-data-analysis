@@ -26,8 +26,8 @@ def convert_files_in_folder(input_directory: str, output_directory: str):
 
     for file in file_list:
         if file.is_file():
-            input_file_path = input_directory + '/' + file.name
-            output_file_path = output_directory + '/' + os.path.splitext(file.name)[0] + '.parquet'
+            input_file_path = os.path.join(input_directory, file.name)
+            output_file_path = os.path.join(output_directory, os.path.splitext(file.name)[0] + '.parquet')
             convert_json_to_parquet(input_file_path, output_file_path)
         else:
             pass
