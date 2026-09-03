@@ -6,11 +6,18 @@ import pyarrow.parquet as pq
 
 def convert_json_to_parquet(input_file_path: str, output_file_path: str):
 
-    df = pd.read_json(input_file_path)
+    try:
+        df = pd.read_json(input_file_path)
+    except:
+        raise FileNotFoundError(f'File {input_file_path} not found. Please enter valid location')
 
     table = pa.Table.from_pandas(df)
 
-    pq.write_table(table, output_file_path)
+    try:
+        pq.write_table(table, output_file_path)
+
+    except:
+        raise FileNotFoundError(f'Cannot write {output_file_path}. Directory does not exist')
 
 
 def convert_files_in_folder(input_directory: str, output_directory: str):
