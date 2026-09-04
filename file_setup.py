@@ -22,7 +22,13 @@ def convert_json_to_parquet(input_file_path: str, output_file_path: str):
 
 def convert_files_in_folder(input_directory: str, output_directory: str):
 
-    file_list = os.scandir(input_directory)
+    try:
+        file_list = list(os.scandir(input_directory))
+    except:
+        raise FileNotFoundError(f'{input_directory} does not exist')
+
+    if not file_list:
+        raise FileNotFoundError(f'Input directory is empty')
 
     for file in file_list:
         if file.is_file():
