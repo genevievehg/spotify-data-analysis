@@ -63,5 +63,27 @@ def test_convert_files_in_folder(tmp_path):
         df.to_json(input_directory / f'test_input_{i}.json', orient="records")
 
     convert_files_in_folder(str(input_directory), str(output_directory))
-    
+
     assert (output_directory / 'test_input_0.parquet').exists()
+    assert (output_directory / 'test_input_1.parquet').exists()
+
+
+def test_convert_files_in_folder_handles_missing_input_directory(tmp_path):
+    input_directory = tmp_path / 'test_input'
+    output_directory = tmp_path / 'test_output'
+
+    with pytest.raises(FileNotFoundError) as e:
+        convert_files_in_folder(str(input_directory), str(output_directory))
+
+    assert e.value.args[0] == f'{input_directory} does not exist'
+
+
+def test_convert_files_in_folder_handles_empty_input_directory(tmp_path):
+    input_directory = tmp_path / 'test_input'
+    input_directory.mkdir()
+    output_directory = tmp_path / 'test_output'
+
+    with pytest.raises(FileNotFoundError) as e:
+        convert_files_in_folder(str(input_directory), str(output_directory))
+
+    assert e.value.args[0] == f'Input directory is empty'
