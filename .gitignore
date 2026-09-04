@@ -3,3 +3,4 @@ data
 .env
 notes.md
 **/__pycache__/
+.spotify_cache
