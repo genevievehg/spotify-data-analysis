@@ -36,5 +36,20 @@ def get_artist_data(id: str):
             del result[key]
     
     df = pd.DataFrame(result, index=[0])
+
+    return df
     
+
+def get_album_data(id: str):
+
+    result = sp.album(album_id=id)
+    dictionary_keys = result.keys()
+
+    keys_to_remove = ['external_urls', 'href', 'images', 'artists', 'tracks', 'copyrights', 'external_ids']
+
+    for key in keys_to_remove:
+        if key in dictionary_keys:
+            del result[key]
+
+    df = pd.DataFrame([result], index=[0])
     return df
