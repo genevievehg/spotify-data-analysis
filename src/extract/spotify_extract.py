@@ -53,3 +53,23 @@ def get_album_data(id: str):
 
     df = pd.DataFrame([result], index=[0])
     return df
+
+
+def get_track_data(id: str):
+
+    result = sp.track(track_id=id)
+    dictionary_keys = result.keys()
+
+    keys_to_remove = ['artists', 'external_ids', 'external_urls', 'href']
+
+    for key in keys_to_remove:
+        if key in dictionary_keys:
+            del result[key]
+
+    if 'album' in result.keys():
+        result['album_uri'] = result['album']['uri']
+        del result['album']
+
+    df = pd.DataFrame(result, index=[0])
+
+    return df
