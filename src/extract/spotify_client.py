@@ -15,6 +15,6 @@ def spotify_client():
         cache_path=".spotify_cache"
     )
 
-    sp = spotipy.Spotify(auth_manager=auth_manager)
+    sp = spotipy.Spotify(auth_manager=auth_manager, retries=0)
 
     return sp
