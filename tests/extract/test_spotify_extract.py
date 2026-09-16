@@ -1,7 +1,7 @@
 import pandas as pd
 from unittest.mock import patch
 
-from src.extract.spotify_extract import get_user_data, get_artist_data, get_album_data
+from src.extract.spotify_extract import get_user_data, get_artist_data, get_album_data, get_track_data
 
 def test_get_user_data():
 
@@ -156,3 +156,41 @@ def test_get_album_data():
     
         assert len(result) == 1
         assert len(result.columns) == 12
+
+
+def test_get_track_data():
+
+    mock_track_data = {
+        "id": "track123",
+        "name": "Test Track",
+        "uri": "spotify:track:track123",
+        "artists": [],
+        "external_ids": {},
+        "external_urls": {},
+        "href": "https://api.spotify.com",
+        "album": {
+            "uri": "spotify:album:album123"
+        }
+    }
+
+    with patch("src.extract.spotify_extract.sp.track") as mock_spotify:
+            mock_spotify.return_value = mock_track_data.copy()
+        
+            result = get_track_data('id123')
+        
+            mock_spotify.assert_called_once_with(track_id="id123")
+                
+            assert isinstance(result, pd.DataFrame)
+            
+            assert "id" in result.columns
+            assert "name" in result.columns
+            assert "uri" in result.columns
+            assert "album_uri" in result.columns
+
+            assert "external_urls" not in result.columns
+            assert "href" not in result.columns
+            assert "external_ids" not in result.columns
+            assert "artists" not in result.columns
+
+            assert len(result) == 1
+            assert len(result.columns) == 4
