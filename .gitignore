@@ -4,3 +4,4 @@ data
 notes.md
 **/__pycache__/
 .spotify_cache
+logs/
