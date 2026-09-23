@@ -1,7 +1,10 @@
+import numpy as np
 import pandas as pd
-from unittest.mock import patch
 
-from src.extract.spotify_extract import get_user_data, get_artist_data, get_album_data, get_track_data
+from unittest.mock import patch
+from spotipy import SpotifyException
+
+from src.extract.spotify_extract import get_user_data, get_artist_data, get_album_data, get_track_data, get_multiple_track_data
 
 def test_get_user_data():
 
@@ -164,7 +167,18 @@ def test_get_track_data():
         "id": "track123",
         "name": "Test Track",
         "uri": "spotify:track:track123",
-        "artists": [],
+        "artists": [
+            {
+                "external_urls": {
+                    "spotify": "string"
+                    },
+                "href": "string",
+                "id": "string",
+                "name": "string",
+                "type": "artist",
+                "uri": "string"
+            }
+            ],
         "external_ids": {},
         "external_urls": {},
         "href": "https://api.spotify.com",
@@ -186,11 +200,153 @@ def test_get_track_data():
             assert "name" in result.columns
             assert "uri" in result.columns
             assert "album_uri" in result.columns
+            assert "artist_uris"  in result.columns
 
             assert "external_urls" not in result.columns
             assert "href" not in result.columns
             assert "external_ids" not in result.columns
-            assert "artists" not in result.columns
 
             assert len(result) == 1
-            assert len(result.columns) == 4
+            assert len(result.columns) == 5
+
+
+def test_get_multiple_track_data_enriches_new_tracks(tmp_path, monkeypatch):
+
+    cache_path = tmp_path / "cached_track_metadata.parquet"
+
+    unique_track_uris = np.array([
+        "spotify:track:111",
+        "spotify:track:222"
+    ])
+
+    def mock_get_track_data(track_uri):
+        return pd.DataFrame({
+            "name": ["Test Track"]
+        })
+
+    monkeypatch.setattr(
+        "src.extract.spotify_extract.get_track_data",
+        mock_get_track_data
+    )
+
+    monkeypatch.setattr(
+        "src.extract.spotify_extract.time.sleep",
+        lambda _: None
+    )
+
+    result = get_multiple_track_data(
+        unique_track_uris,
+        cached_metadata_path=cache_path
+    )
+
+    assert len(result) == 2
+    assert set(result["uri"]) == {
+        "spotify:track:111",
+        "spotify:track:222"
+    }
+
+    assert cache_path.exists()
+
+
+def test_get_multiple_track_data_skips_cached_tracks(tmp_path, monkeypatch):
+
+    cache_path = tmp_path / "cached_track_metadata.parquet"
+
+    cached = pd.DataFrame({
+        "uri": ["spotify:track:111"],
+        "name": ["Cached Track"]
+    })
+
+    cached.to_parquet(cache_path)
+
+    requested_tracks = []
+
+    def mock_get_track_data(track_uri):
+        requested_tracks.append(track_uri)
+
+        return pd.DataFrame({
+            "name": ["New Track"]
+        })
+
+    monkeypatch.setattr(
+        "src.extract.spotify_extract.get_track_data",
+        mock_get_track_data
+    )
+
+    monkeypatch.setattr(
+        "src.extract.spotify_extract.time.sleep",
+        lambda _: None
+    )
+
+    unique_track_uris = np.array([
+        "spotify:track:111",
+        "spotify:track:222"
+    ])
+
+    result = get_multiple_track_data(
+        unique_track_uris,
+        cached_metadata_path=cache_path
+    )
+
+    assert requested_tracks == ["spotify:track:222"]
+
+    assert set(result["uri"]) == {
+        "spotify:track:111",
+        "spotify:track:222"
+    }
+
+
+def test_get_multiple_track_data_stops_on_rate_limit(
+    tmp_path,
+    monkeypatch
+):
+
+    cache_path = tmp_path / "cached_track_metadata.parquet"
+
+    requested_tracks = []
+
+    def mock_get_track_data(track_uri):
+
+        requested_tracks.append(track_uri)
+
+        if track_uri == "spotify:track:222":
+            raise SpotifyException(
+                http_status=429,
+                code=-1,
+                msg="Rate limit exceeded"
+            )
+
+        return pd.DataFrame({
+            "name": ["Test Track"]
+        })
+
+    monkeypatch.setattr(
+        "src.extract.spotify_extract.get_track_data",
+        mock_get_track_data
+    )
+
+    monkeypatch.setattr(
+        "src.extract.spotify_extract.time.sleep",
+        lambda _: None
+    )
+
+    unique_track_uris = np.array([
+        "spotify:track:111",
+        "spotify:track:222",
+        "spotify:track:333"
+    ])
+
+    result = get_multiple_track_data(
+        unique_track_uris,
+        cached_metadata_path=cache_path
+    )
+
+    assert len(requested_tracks) == 2
+
+    assert "spotify:track:333" not in requested_tracks
+
+    assert set(result["uri"]) == {
+        "spotify:track:111"
+    }
+
+    assert cache_path.exists()
