@@ -95,16 +95,18 @@ def get_track_data(id: str):
 
     if 'artists' in result.keys():
         result['artist_uris'] = [artist["uri"] for artist in result["artists"]]
-        del result['artist']
+        del result['artists']
 
     df = pd.DataFrame(result, index=[0])
 
     return df
 
 
-def get_multiple_track_data(unique_track_uris: np.ndarray):
-    
-    cached_metadata_path = 'data/raw/spotify_api/cached_track_metadata.parquet'
+def get_multiple_track_data(
+        unique_track_uris: np.ndarray, 
+        cached_metadata_path = 'data/raw/spotify_api/cached_track_metadata.parquet'
+        ):
+
 
     if os.path.isfile(cached_metadata_path):
         metadata_df = pd.read_parquet(cached_metadata_path)
