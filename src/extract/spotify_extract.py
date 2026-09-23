@@ -101,9 +101,6 @@ def get_track_data(id: str):
 
     return df
 
-#test = get_track_data('0vMctOnb4YNIvbqgkbWNDy')
-#print(test)
-
 
 def get_multiple_track_data(unique_track_uris: np.ndarray):
     
