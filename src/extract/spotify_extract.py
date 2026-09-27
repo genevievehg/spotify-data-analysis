@@ -94,7 +94,7 @@ def get_track_data(id: str):
         del result['album']
 
     if 'artists' in result.keys():
-        result['artist_uris'] = [artist["uri"] for artist in result["artists"]]
+        result['artist_uris'] = [[artist["uri"] for artist in result["artists"]]]
         del result['artists']
 
     df = pd.DataFrame(result, index=[0])
