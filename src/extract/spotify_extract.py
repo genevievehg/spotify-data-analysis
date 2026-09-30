@@ -61,6 +61,57 @@ def get_artist_data(id: str):
     df = pd.DataFrame(result, index=[0])
 
     return df
+
+
+def get_multiple_artist_data(
+        unique_artist_uris: np.ndarray, 
+        cached_metadata_path = 'data/raw/spotify_api/cached_artist_metadata.parquet'
+        ):
+
+
+    if os.path.isfile(cached_metadata_path):
+        metadata_df = pd.read_parquet(cached_metadata_path)
+        existing_artist_uris = set(metadata_df["uri"])
+        artist_uris_to_enrich = set(unique_artist_uris) - existing_artist_uris
+
+    else:
+        metadata_df = pd.DataFrame()
+        artist_uris_to_enrich = unique_artist_uris
+
+
+    logger.info(f'{len(artist_uris_to_enrich)} tracks to enrich')
+
+    artists = []
+
+    for i, artist_uri in enumerate(artist_uris_to_enrich, start=1):
+
+        try:
+            artist_df = get_artist_data(artist_uri)
+        except SpotifyException as e:
+            if e.http_status == 429:
+                logger.warning(
+                    f'Spotify rate limit reached after {i-1} tracks. '
+                    'Stopping enrichment.')
+                break
+            raise
+
+        artist_df['uri'] = artist_uri
+        artists.append(artist_df)
+
+        time.sleep(1)
+
+        if i % 50 == 0 and artists:
+            new_metadata_df = pd.concat(artists)
+            metadata_df = pd.concat([metadata_df, new_metadata_df], ignore_index=True)
+            metadata_df.to_parquet(cached_metadata_path)
+            artists = []
+
+    if artists:
+        new_metadata_df = pd.concat(artists)
+        metadata_df = pd.concat([metadata_df, new_metadata_df], ignore_index=True)
+        metadata_df.to_parquet(cached_metadata_path)
+
+    return metadata_df
     
 
 def get_album_data(id: str):
@@ -91,10 +142,13 @@ def get_track_data(id: str):
 
     if 'album' in result.keys():
         result['album_uri'] = result['album']['uri']
+        result['album_name'] = result['album']['name']
+        result['album_artists'] = [[artist["name"] for artist in result["album"]['artists']]]
         del result['album']
 
     if 'artists' in result.keys():
         result['artist_uris'] = [[artist["uri"] for artist in result["artists"]]]
+        result['artist_names'] = [[artist["name"] for artist in result["artists"]]]
         del result['artists']
 
     df = pd.DataFrame(result, index=[0])
